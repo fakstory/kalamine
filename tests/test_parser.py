@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
 
+import pytest
+
 from kalamine import KeyboardLayout
 from kalamine.cli import build_all
 from kalamine.layout import load_layout as resolve_layout
@@ -90,56 +92,85 @@ def test_intl():  # 1dk + dead keys
     assert layout.layers[1]["ab01"] == "X"
 
 
-def test_extends_diff():  # base_diff / altgr_diff overlay on parent
-    fixtures = Path(__file__).parent / "extended-diff"
-    parent = KeyboardLayout(resolve_layout(fixtures / "base" / "Bépo.toml"))
-    child = KeyboardLayout(
-        resolve_layout(fixtures / "extended" / "bepo_extended.toml")
-    )
+FIXTURES = Path(__file__).parent / "extended-diff"
 
-    # sanity: parent is a normal extends_diff-free Bépo
-    assert parent.has_altgr
-    assert parent.meta["name"] == "bepo"
+EXTENDED_DIFF_CASES = [
+    pytest.param(
+        FIXTURES / "base" / "Bépo.toml",
+        FIXTURES / "extended" / "bepo_extended.toml",
+        {
+            (0, "tlde"): "=",
+            (0, "ae02"): "<",
+            (0, "ae03"): ">",
+            (0, "ae11"): "$",
+            (0, "ad11"): "w",
+            (1, "ad11"): "W",
+            (0, "ad12"): "z",
+            (1, "ad12"): "Z",
+            (4, "ae02"): "«",
+            (4, "ae03"): "»",
+        },
+        [(0, "ae01"), (1, "ae01"), (0, "ac01"), (1, "ac01")],
+        {"name": "bepo-extended", "variant": "bepo-extended"},
+        id="bepo",
+    ),
+    pytest.param(
+        FIXTURES / "base" / "Bépolar.toml",
+        FIXTURES / "extended" / "bepolar_extended.toml",
+        {
+            (0, "tlde"): "=",
+            (1, "tlde"): "#",
+            (1, "ae02"): "<",
+            (1, "ae03"): "<",   # the fixture really has `<` at ae03 shift
+            (0, "ae11"): "$",
+            (0, "ad11"): "w",
+            (1, "ad11"): "W",
+            (0, "ad12"): "z",
+            (1, "ad12"): "Z",
+            (4, "ae02"): "«",
+            (4, "ae03"): "»",
+        },
+        [(0, "ac01"), (1, "ac01"), (0, "ac02"), (1, "ac02")],
+        {"name": "bepolar-extended", "variant": "bepolar-extended"},
+        id="bepolar",
+    ),
+]
 
-    overrides = {
-        (0, "tlde"): "=",
-        (0, "ae02"): "<",
-        (0, "ae03"): ">",
-        (0, "ae11"): "$",
-        (0, "ad11"): "w",
-        (1, "ad11"): "W",
-        (0, "ad12"): "z",
-        (1, "ad12"): "Z",
-        (4, "ae02"): "«",
-        (4, "ae03"): "»",
-    }
+
+@pytest.mark.parametrize(
+    "parent_path, child_path, overrides, untouched, expected_meta",
+    EXTENDED_DIFF_CASES,
+)
+def test_extends_diff(parent_path, child_path, overrides, untouched, expected_meta):
+    """base_diff / altgr_diff overlay on parent."""
+    parent = KeyboardLayout(resolve_layout(parent_path))
+    child = KeyboardLayout(resolve_layout(child_path))
+
     for (layer, key), value in overrides.items():
-        assert child.layers[layer][key] == value
-        assert child.layers[layer][key] != parent.layers[layer].get(key)
+        assert child.layers[layer][key] == value, (layer, key)
+        assert child.layers[layer][key] != parent.layers[layer].get(key), (layer, key)
 
-    # untouched cells come from parent
-    assert child.layers[0]["ae01"] == parent.layers[0]["ae01"]
-    assert child.layers[1]["ae01"] == parent.layers[1]["ae01"]
-    assert child.layers[0]["ac01"] == parent.layers[0]["ac01"]
-    assert child.layers[1]["ac01"] == parent.layers[1]["ac01"]
+    for layer, key in untouched:
+        assert child.layers[layer][key] == parent.layers[layer][key], (layer, key)
 
-    # has_altgr carries from parent even though child only declared diffs
-    assert child.has_altgr
-
-    # parent dead keys are preserved
+    assert child.has_altgr == parent.has_altgr
     assert set(child.dead_keys) == set(parent.dead_keys)
 
-    # metadata: child's own fields win, parent fills in the rest
-    assert child.meta["name"] == "bepo-extended"
-    assert child.meta["variant"] == "bepo-extended"
+    for field, value in expected_meta.items():
+        assert child.meta[field] == value
     assert child.meta["geometry"] == parent.meta["geometry"]
 
 
-def test_extends_diff_build(tmp_path):
-    fixtures = Path(__file__).parent / "extended-diff"
-    child = KeyboardLayout(
-        resolve_layout(fixtures / "extended" / "bepo_extended.toml")
-    )
+@pytest.mark.parametrize(
+    "parent_path, child_path, overrides, untouched, expected_meta",
+    EXTENDED_DIFF_CASES,
+)
+def test_extends_diff_build(
+    tmp_path, parent_path, child_path, overrides, untouched, expected_meta
+):
+    """Full build + merged.toml round-trip for an extends_diff child."""
+    del parent_path  # provided by shared parametrize signature; unused here
+    child = KeyboardLayout(resolve_layout(child_path))
     dist = tmp_path / "dist"
 
     build_all(child, dist)
@@ -150,25 +181,20 @@ def test_extends_diff_build(tmp_path):
     for ext in exts:
         assert (dist / f"{stem}{ext}").exists(), f"missing {stem}{ext}"
 
-    # klc fails when name8 is too long (13 chars here) and writes a 0-byte file
+    # klc fails when name8 is too long and writes a 0-byte file
     for ext in (".ahk", ".keylayout", ".xkb_keymap", ".xkb_symbols",
                 ".json", ".svg", "_merged.toml"):
         assert (dist / f"{stem}{ext}").stat().st_size > 0, f"empty {stem}{ext}"
 
     data = json.loads((dist / f"{stem}.json").read_text(encoding="utf-8"))
-    assert data["name"] == "bepo-extended"
-    # diff overrides are visible in the generated JSON
-    assert data["keymap"]["Digit2"][0] == "<"
-    assert data["keymap"]["Digit3"][0] == ">"
-    # parent-inherited cells passed through the merge
-    assert data["keymap"]["KeyQ"][0] == "b"
+    assert data["name"] == expected_meta["name"]
 
-    # Merged TOML: reload it as a standalone (no `extends`) layout and
-    # verify the overrides survive a full round-trip through disk.
+    # Merged TOML: reload it as a standalone (no `extends`) layout and verify
+    # the overrides survive a full round-trip through disk.
     reloaded = KeyboardLayout(resolve_layout(dist / f"{stem}_merged.toml"))
     assert "extends" not in reloaded.meta
-    assert reloaded.layers[0]["tlde"] == "="
-    assert reloaded.layers[0]["ae02"] == "<"
-    assert reloaded.layers[0]["ad11"] == "w" and reloaded.layers[1]["ad11"] == "W"
-    assert reloaded.layers[0]["ac01"] == child.layers[0]["ac01"]
+    for (layer, key), value in overrides.items():
+        assert reloaded.layers[layer][key] == value, (layer, key)
+    for layer, key in untouched:
+        assert reloaded.layers[layer][key] == child.layers[layer][key], (layer, key)
     assert reloaded.has_altgr == child.has_altgr

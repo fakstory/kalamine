@@ -1,18 +1,18 @@
-name        = "bepo-extended"
-name8       = "bepo-extended"
+name        = "bepolar-extended"
+name8       = "bepolar-extended"
 extends     = "../base/Bépolar.toml"
 locale      = "fr"
-variant     = "bepo-extended"
-description = "bepo-extended (bepo/code)"
+variant     = "bepolar-extended"
+description = "bepolar-extended (bepolar/code)"
 author      = "Fakstory"
-url         = "https://github.com/fakstory/katany/kalamine"
+url         = "https://github.com/fakstory/katanyx/config/kalamine/extended/bepo_extended.toml"
 geometry    = "ERGO"
 version     = "0.7.1"
 
 base_diff = '''
 ╭╌╌╌╌╌┰─────┬─────┬─────┬─────┬─────┰─────┬─────┬─────┬─────┬─────┰╌╌╌╌╌┬╌╌╌╌╌╮
-┆ #   ┃     │     │     │     │     ┃     │     │     │     │     ┃     ┆     ┆
-┆ =   ┃     │ <   │ >   │     │     ┃     │     │     │     │     ┃ $   ┆     ┆
+┆ #   ┃     │ <   │ <   │     │     ┃     │     │     │     │     ┃     ┆     ┆
+┆ =   ┃     │     │     │     │     ┃     │     │     │     │     ┃ $   ┆     ┆
 ╰╌╌╌╌╌╂─────┼─────┼─────┼─────┼─────╂─────┼─────┼─────┼─────┼─────╂╌╌╌╌╌┼╌╌╌╌╌┤
 ·     ┃     │     │     │     │     ┃     │     │     │     │     ┃ W   ┆ Z   ┆
 ·     ┃     │     │     │     │     ┃     │     │     │     │     ┃     ┆     ┆

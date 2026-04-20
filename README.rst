@@ -92,6 +92,55 @@ You can also ask for a single target by specifying the file extension:
 
     kalamine build layout.toml --out layout.xkb_symbols
 
+Each ``kalamine build`` invocation also writes a ``<name>_merged.toml`` next to the platform drivers — a self-contained TOML descriptor of the fully-resolved layout (handy when the source uses inheritance, see below).
+
+
+Extended Layouts (Diff Inheritance)
+--------------------------------------------------------------------------------
+
+A layout can be defined as a small *diff* on top of an existing one, instead of being copied and edited in full. This is useful when you want to ship a personal variant of a community layout (Bépo, Ergo‑L, …) without re-stating every key, and have your variant track upstream automatically.
+
+A child layout declares its parent with ``extends`` (path is resolved relative to the child file) and provides one or more *diff* tables — ``base_diff``, ``altgr_diff``, or ``full_diff`` — drawn on the same ASCII keyboard template as ``base`` / ``altgr`` / ``full``, but with **only the cells you want to override** filled in. Empty cells fall through to the parent.
+
+Top-level metadata (``name``, ``variant``, ``description``, ``author``, …) on the child overrides the parent's; anything the child omits is inherited.
+
+.. code-block:: toml
+
+    name        = "bepo-extended"
+    name8       = "bepo-extended"
+    extends     = "../base/Bépo.toml"     # path is relative to this file
+    locale      = "fr"
+    variant     = "bepo-extended"
+    geometry    = "ERGO"
+    version     = "0.7.1"
+
+    base_diff = '''
+    ╭╌╌╌╌╌┰─────┬─────┬─────┬─────┬─────┰ … (template with only changed cells filled in)
+    '''
+
+    altgr_diff = '''
+    ╭╌╌╌╌╌┰─────┬─────┬─────┬─────┬─────┰ … (same idea on the AltGr layer)
+    '''
+
+A complete worked example lives at `tests/extended-diff/extended/bepo_extended.toml`_, with its parent at `tests/extended-diff/base/Bépo.toml`_.
+
+Build the child like any other layout:
+
+.. code-block:: bash
+
+    kalamine build bepo_extended.toml
+
+The generated ``dist/bepo-extended_merged.toml`` is a *flat* standalone descriptor of the resolved layout — no ``extends`` line, no ``*_diff`` tables — that you can ship, diff, or load on its own.
+
+A few conventions worth following:
+
+* keep the parent layout in a sibling directory (e.g. ``base/Parent.toml`` next to ``extended/parent_extended.toml``) so the relative ``extends`` path is short;
+* suffix the child file with ``_extended.toml`` to make its role obvious at a glance;
+* set a distinct ``name`` / ``name8`` on the child (otherwise its build outputs collide with the parent's in ``dist/``).
+
+.. _tests/extended-diff/extended/bepo_extended.toml: https://github.com/OneDeadKey/kalamine/blob/main/tests/extended-diff/extended/bepo_extended.toml
+.. _tests/extended-diff/base/Bépo.toml: https://github.com/OneDeadKey/kalamine/blob/main/tests/extended-diff/base/B%C3%A9po.toml
+
 
 Emulating Layouts
 --------------------------------------------------------------------------------
