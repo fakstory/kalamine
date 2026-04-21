@@ -472,7 +472,11 @@ def update_rules_lst(xkb_root: Path, kbd_index: KbdIndex) -> None:
             content_tail = content[variant_end:]
             variant_lines = content[variant_start:variant_end].split("\n")
             try:
-                variants = [LstVariantLine.from_line(line) for line in variant_lines]
+                variants = [
+                    LstVariantLine.from_line(line)
+                    for line in variant_lines
+                    if line.strip()
+                ]
             except ValueError as exc:
                 raise ValueError(f"File {filepath}: {exc}") from exc
 

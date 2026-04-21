@@ -116,7 +116,7 @@ EXTENDED_DIFF_CASES = [
     ),
     pytest.param(
         FIXTURES / "base" / "Bépolar.toml",
-        FIXTURES / "extended" / "bepolar_extended.toml",
+        FIXTURES / "extended" / "bpolar_extended.toml",
         {
             (0, "tlde"): "=",
             (1, "tlde"): "#",
@@ -131,7 +131,7 @@ EXTENDED_DIFF_CASES = [
             (4, "ae03"): "»",
         },
         [(0, "ac01"), (1, "ac01"), (0, "ac02"), (1, "ac02")],
-        {"name": "bepolar-extended", "variant": "bepolar-extended"},
+        {"name": "bpolar-extended", "variant": "bpolar-extended"},
         id="bepolar",
     ),
 ]
