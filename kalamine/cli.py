@@ -82,10 +82,14 @@ def build_all(
     with file_creation_context(".svg") as svg_path:
         web.svg(layout).write(svg_path, encoding="utf-8", xml_declaration=True)
 
-    if add_merged_file:
+if add_merged_file:
         output_subdir = output_dir_path / layout.meta["fileName"]
         toml_out.write_split_toml(layout, layout_path, output_subdir)
         click.echo(f"... {output_subdir}")
+
+    # Merged TOML: standalone descriptor of the fully-resolved layout
+    with file_creation_context("_merged.toml") as toml_path:
+        toml_path.write_text(toml_out.merged_toml(layout), encoding="utf-8")
 
 
 @cli.command()

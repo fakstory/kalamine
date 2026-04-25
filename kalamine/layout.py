@@ -23,20 +23,24 @@ from .utils import (
 #
 
 
-def _load_descriptor(file_path: Path) -> Dict:
-    if file_path.suffix in [".yaml", ".yml"]:
-        with file_path.open(encoding="utf-8") as file:
-            return yaml.load(file, Loader=yaml.SafeLoader)
-
-    with file_path.open(mode="rb") as dfile:
-        return tomllib.load(dfile)
+_DIFF_KEYS = {"base_diff": "base", "altgr_diff": "altgr", "full_diff": "full"}
 
 
-def resolve_parent_path(layout_path: Path) -> Optional[Path]:
-    cfg = _load_descriptor(layout_path)
-    if "extends" in cfg:
-        return layout_path.parent / cfg["extends"]
-    return None
+def _resolve_diff_extend(cfg: Dict, parent_cfg: Dict) -> Dict:
+    """Rename `*_diff` fields and inherit parent metadata without its templates.
+
+    Returns a cfg dict with child fields on top, parent meta filling the rest,
+    and the raw parent stashed under `_parent_cfg` for KeyboardLayout to overlay.
+    """
+    for diff_key, real_key in _DIFF_KEYS.items():
+        if diff_key in cfg:
+            cfg[real_key] = cfg.pop(diff_key)
+    merged = {
+        k: v for k, v in parent_cfg.items() if k not in ("base", "altgr", "full")
+    }
+    merged.update(cfg)
+    merged["_parent_cfg"] = parent_cfg
+    return merged
 
 
 def load_layout(layout_path: Path) -> Dict:
@@ -48,9 +52,12 @@ def load_layout(layout_path: Path) -> Dict:
             cfg["name"] = layout_path.stem
         if "extends" in cfg:
             parent_path = layout_path.parent / cfg["extends"]
-            ext = _load_descriptor(parent_path)
-            ext.update(cfg)
-            cfg = ext
+            parent_cfg = _load_descriptor(parent_path)
+            if any(k in cfg for k in _DIFF_KEYS):
+                cfg = _resolve_diff_extend(cfg, parent_cfg)
+            else:
+                parent_cfg.update(cfg)
+                cfg = parent_cfg
         if "version" in cfg:
             version_check = cfg["version"].split(".")
             if len(version_check) > 3:
@@ -228,6 +235,34 @@ class KeyboardLayout:
             self.layers[Layer.ALTGR_SHIFT]["spce"] = spc["altgr_shift"]
 
         self._parse_dead_keys(spc)
+
+        if "_parent_cfg" in layout_data:
+            self._overlay_parent(
+                layout_data["_parent_cfg"], angle_mod, qwerty_shortcuts, spc
+            )
+
+    def _overlay_parent(
+        self,
+        parent_cfg: Dict,
+        angle_mod: bool,
+        qwerty_shortcuts: bool,
+        spc: Dict[str, str],
+    ) -> None:
+        """Overlay this (child) layout on top of its parent.
+
+        Child-defined cells win; unset cells fall through to the parent. Dead
+        keys are re-parsed against the merged layers so inherited entries stay
+        valid.
+        """
+        parent = KeyboardLayout(parent_cfg, angle_mod, qwerty_shortcuts)
+        for layer in Layer:
+            parent.layers[layer].update(self.layers[layer])
+        self.layers = parent.layers
+        self.dk_set = parent.dk_set | self.dk_set
+        self.has_altgr = parent.has_altgr or self.has_altgr
+        self.has_1dk = parent.has_1dk or self.has_1dk
+        self._parse_dead_keys(spc)
+        self.dead_keys = {**parent.dead_keys, **self.dead_keys}
 
     def _parse_dead_keys(self, spc: Dict[str, str]) -> None:
         """Build a deadkey dict."""
