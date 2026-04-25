@@ -5,9 +5,9 @@ locale      = "fr"
 variant     = "bepo-extended"
 description = "bepo-extended (bepo/code)"
 author      = "Fakstory"
-url         = "https://github.com/fakstory/katanyx/config/kalamine/extended/bepo_extended.toml"
+url         = "https://github.com/fakstory/katanyx/config/kalamine/extended/bepo-extended.toml"
 geometry    = "ERGO"
-version     = "0.7.1"
+version     = "0.0.1"
 
 base_diff = '''
 ╭╌╌╌╌╌┰─────┬─────┬─────┬─────┬─────┰─────┬─────┬─────┬─────┬─────┰╌╌╌╌╌┬╌╌╌╌╌╮

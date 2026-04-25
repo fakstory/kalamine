@@ -7,7 +7,7 @@ from typing import Iterator, List, Literal, Union
 
 import click
 
-from .generators import ahk, keylayout, klc, toml_out, web, xkb
+from .generators import ahk, keylayout, klc, report, toml_out, web, xkb
 from .help import create_layout, user_guide
 from .layout import KeyboardLayout, load_layout
 from .server import keyboard_server
@@ -90,6 +90,11 @@ if add_merged_file:
     # Merged TOML: standalone descriptor of the fully-resolved layout
     with file_creation_context("_merged.toml") as toml_path:
         toml_path.write_text(toml_out.merged_toml(layout), encoding="utf-8")
+
+    # Merged report: Markdown summary of key changes (extended layouts only)
+    if layout.key_diffs:
+        with file_creation_context("_merged_report.md") as report_path:
+            report_path.write_text(report.merged_report(layout), encoding="utf-8")
 
 
 @cli.command()

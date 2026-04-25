@@ -97,7 +97,7 @@ FIXTURES = Path(__file__).parent / "extended-diff"
 EXTENDED_DIFF_CASES = [
     pytest.param(
         FIXTURES / "base" / "Bépo.toml",
-        FIXTURES / "extended" / "bepo_extended.toml",
+        FIXTURES / "extended" / "bepo-extended.toml",
         {
             (0, "tlde"): "=",
             (0, "ae02"): "<",
@@ -116,7 +116,7 @@ EXTENDED_DIFF_CASES = [
     ),
     pytest.param(
         FIXTURES / "base" / "Bépolar.toml",
-        FIXTURES / "extended" / "bpolar_extended.toml",
+        FIXTURES / "extended" / "bpolar-extended.toml",
         {
             (0, "tlde"): "=",
             (1, "tlde"): "#",

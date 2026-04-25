@@ -122,23 +122,23 @@ Top-level metadata (``name``, ``variant``, ``description``, ``author``, …) on 
     ╭╌╌╌╌╌┰─────┬─────┬─────┬─────┬─────┰ … (same idea on the AltGr layer)
     '''
 
-A complete worked example lives at `tests/extended-diff/extended/bepo_extended.toml`_, with its parent at `tests/extended-diff/base/Bépo.toml`_.
+A complete worked example lives at `tests/extended-diff/extended/bepo-extended.toml`_, with its parent at `tests/extended-diff/base/Bépo.toml`_.
 
 Build the child like any other layout:
 
 .. code-block:: bash
 
-    kalamine build bepo_extended.toml
+    kalamine build bepo-extended.toml
 
 The generated ``dist/bepo-extended_merged.toml`` is a *flat* standalone descriptor of the resolved layout — no ``extends`` line, no ``*_diff`` tables — that you can ship, diff, or load on its own.
 
 A few conventions worth following:
 
-* keep the parent layout in a sibling directory (e.g. ``base/Parent.toml`` next to ``extended/parent_extended.toml``) so the relative ``extends`` path is short;
-* suffix the child file with ``_extended.toml`` to make its role obvious at a glance;
+* keep the parent layout in a sibling directory (e.g. ``base/Parent.toml`` next to ``extended/parent-extended.toml``) so the relative ``extends`` path is short;
+* suffix the child file with ``-extended.toml`` to make its role obvious at a glance;
 * set a distinct ``name`` / ``name8`` on the child (otherwise its build outputs collide with the parent's in ``dist/``).
 
-.. _tests/extended-diff/extended/bepo_extended.toml: https://github.com/OneDeadKey/kalamine/blob/main/tests/extended-diff/extended/bepo_extended.toml
+.. _tests/extended-diff/extended/bepo-extended.toml: https://github.com/OneDeadKey/kalamine/blob/main/tests/extended-diff/extended/bepo-extended.toml
 .. _tests/extended-diff/base/Bépo.toml: https://github.com/OneDeadKey/kalamine/blob/main/tests/extended-diff/base/B%C3%A9po.toml
 
 

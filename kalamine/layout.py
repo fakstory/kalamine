@@ -173,6 +173,9 @@ class KeyboardLayout:
         self.has_1dk = False
         self.qwerty_shortcuts = qwerty_shortcuts
         self.angle_mod = angle_mod
+        # key_diffs: populated by _overlay_parent() for extended layouts.
+        # Maps key_name -> {layer_name: (parent_value, child_value)}
+        self.key_diffs: Dict[str, Dict[str, tuple]] = {}
 
         # metadata: self.meta
         for k in layout_data:
@@ -253,8 +256,36 @@ class KeyboardLayout:
         Child-defined cells win; unset cells fall through to the parent. Dead
         keys are re-parsed against the merged layers so inherited entries stay
         valid.
+
+        Also populates self.key_diffs with per-key changes between parent and
+        child so that a report can be generated afterwards.
         """
         parent = KeyboardLayout(parent_cfg, angle_mod, qwerty_shortcuts)
+
+        # Compute diff before merging: collect keys that the child explicitly
+        # sets and that differ from the parent value.  Keys that are absent in
+        # the child's layers (i.e. empty string) are NOT reported — they will
+        # simply fall through to the parent value unchanged.
+        self.key_diffs = {}
+        layer_names = {
+            Layer.BASE: "base",
+            Layer.SHIFT: "shift",
+            Layer.ODK: "1dk",
+            Layer.ODK_SHIFT: "1dk_shift",
+            Layer.ALTGR: "altgr",
+            Layer.ALTGR_SHIFT: "altgr_shift",
+        }
+        for layer, lname in layer_names.items():
+            child_layer = self.layers[layer]
+            parent_layer = parent.layers[layer]
+            # Only look at keys the child explicitly provides.
+            for key, child_val in child_layer.items():
+                parent_val = parent_layer.get(key, "")
+                if child_val != parent_val:
+                    if key not in self.key_diffs:
+                        self.key_diffs[key] = {}
+                    self.key_diffs[key][lname] = (parent_val, child_val)
+
         for layer in Layer:
             parent.layers[layer].update(self.layers[layer])
         self.layers = parent.layers
