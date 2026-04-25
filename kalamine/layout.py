@@ -23,6 +23,22 @@ from .utils import (
 #
 
 
+def _load_descriptor(file_path: Path) -> Dict:
+    if file_path.suffix in [".yaml", ".yml"]:
+        with file_path.open(encoding="utf-8") as file:
+            return yaml.load(file, Loader=yaml.SafeLoader)
+
+    with file_path.open(mode="rb") as dfile:
+        return tomllib.load(dfile)
+
+
+def resolve_parent_path(layout_path: Path) -> Optional[Path]:
+    cfg = _load_descriptor(layout_path)
+    if "extends" in cfg:
+        return layout_path.parent / cfg["extends"]
+    return None
+
+
 _DIFF_KEYS = {"base_diff": "base", "altgr_diff": "altgr", "full_diff": "full"}
 
 

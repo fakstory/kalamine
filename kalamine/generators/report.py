@@ -112,7 +112,7 @@ def merged_report(layout: "KeyboardLayout") -> str:
         lines.append("")
 
         # Table header — only include layer columns that actually appear
-        used_layers = set()
+        used_layers: set[str] = set()
         for _, layer_changes in sections[prefix]:
             used_layers.update(layer_changes.keys())
         ordered_layers = [

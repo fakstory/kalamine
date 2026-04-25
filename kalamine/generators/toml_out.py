@@ -33,7 +33,7 @@ def merged_toml(layout: "KeyboardLayout") -> str:
     lines = []
     for field in META_FIELDS:
         if field in layout.meta:
-            lines.append(f"{field:<12}= {_quote(str(layout.meta[field]))}")
+            lines.append(f"{field:<12}= {_toml_value(layout.meta[field])}")
     lines.append("")
 
     def block(name: str, rows: list) -> None:
