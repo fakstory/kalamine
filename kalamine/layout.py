@@ -23,24 +23,32 @@ from .utils import (
 #
 
 
+def _load_descriptor(file_path: Path) -> Dict:
+    if file_path.suffix in [".yaml", ".yml"]:
+        with file_path.open(encoding="utf-8") as file:
+            return yaml.load(file, Loader=yaml.SafeLoader)
+
+    with file_path.open(mode="rb") as dfile:
+        return tomllib.load(dfile)
+
+
+def resolve_parent_path(layout_path: Path) -> Optional[Path]:
+    cfg = _load_descriptor(layout_path)
+    if "extends" in cfg:
+        return layout_path.parent / cfg["extends"]
+    return None
+
+
 def load_layout(layout_path: Path) -> Dict:
     """Load the TOML/YAML layout description data (and its ancessor, if any)."""
 
-    def load_descriptor(file_path: Path) -> Dict:
-        if file_path.suffix in [".yaml", ".yml"]:
-            with file_path.open(encoding="utf-8") as file:
-                return yaml.load(file, Loader=yaml.SafeLoader)
-
-        with file_path.open(mode="rb") as dfile:
-            return tomllib.load(dfile)
-
     try:
-        cfg = load_descriptor(layout_path)
+        cfg = _load_descriptor(layout_path)
         if "name" not in cfg:
             cfg["name"] = layout_path.stem
         if "extends" in cfg:
             parent_path = layout_path.parent / cfg["extends"]
-            ext = load_descriptor(parent_path)
+            ext = _load_descriptor(parent_path)
             ext.update(cfg)
             cfg = ext
         if "version" in cfg:

@@ -7,7 +7,7 @@ from typing import Iterator, List, Literal, Union
 
 import click
 
-from .generators import ahk, keylayout, klc, web, xkb
+from .generators import ahk, keylayout, klc, toml_out, web, xkb
 from .help import create_layout, user_guide
 from .layout import KeyboardLayout, load_layout
 from .server import keyboard_server
@@ -17,7 +17,12 @@ from .server import keyboard_server
 def cli() -> None: ...
 
 
-def build_all(layout: KeyboardLayout, output_dir_path: Path) -> None:
+def build_all(
+    layout: KeyboardLayout,
+    output_dir_path: Path,
+    layout_path: Path,
+    add_merged_file: bool = False,
+) -> None:
     """Generate all layout output files.
 
     Parameters
@@ -77,6 +82,11 @@ def build_all(layout: KeyboardLayout, output_dir_path: Path) -> None:
     with file_creation_context(".svg") as svg_path:
         web.svg(layout).write(svg_path, encoding="utf-8", xml_declaration=True)
 
+    if add_merged_file:
+        output_subdir = output_dir_path / layout.meta["fileName"]
+        toml_out.write_split_toml(layout, layout_path, output_subdir)
+        click.echo(f"... {output_subdir}")
+
 
 @cli.command()
 @click.argument(
@@ -101,11 +111,18 @@ def build_all(layout: KeyboardLayout, output_dir_path: Path) -> None:
     is_flag=True,
     help="Keep shortcuts at their qwerty location",
 )
+@click.option(
+    "--add-merged-file",
+    default=False,
+    is_flag=True,
+    help="Include TOML source and merged output in dist/<layout>/",
+)
 def build(
     layout_descriptors: List[Path],
     out: Union[Path, Literal["all"]],
     angle_mod: bool,
     qwerty_shortcuts: bool,
+    add_merged_file: bool,
 ) -> None:
     """Convert TOML/YAML descriptions into OS-specific keyboard drivers."""
 
@@ -114,7 +131,7 @@ def build(
 
         # default: build all in the `dist` subdirectory
         if out == "all":
-            build_all(layout, Path("dist"))
+            build_all(layout, Path("dist"), input_file, add_merged_file)
             continue
 
         # quick output: reuse the input name and change the file extension
