@@ -112,14 +112,14 @@ parsed is `~/.config/xkb/rules/evdev`. This mislabel is exactly what
 prompted the dev-notes' "%S expansion silently fails" hypothesis: the
 filename in the error pointed at a phantom file the user couldn't inspect.
 
-**Fix:** commit `6abfad34` on `third_party/xkbcommon` branch
+**Fix:** commit `e4cca2fc` on `third_party/xkbcommon` branch
 `fix/silent-include-failure` — give partial-rules its own
 `partial_path[PATH_MAX]`, leaving the main rules `path` untouched. Also
 adds `log_warn`/`log_dbg` lines around `%`-expansion and absolute-path
 include opens (`src/xkbcomp/rules.c`) so include failures surface at default
 verbosity. ABI-transparent, no public API changes.
 
-**Regression test:** commit `cd8cc2a1` adds
+**Regression test:** commit `edcd9537` adds
 `test/data/rules/inc-no-bang` and a new case in
 `test/rules-file-includes.c` that captures the log via `log_fn` and asserts
 the error names `inc-no-bang`, never `inc-no-bang.pre`. All 30 non-X11
@@ -158,10 +158,10 @@ already works. Leaving it in place.
 ## Status
 
 - xkbcommon diagnostic bug — **fixed** on
-  `third_party/xkbcommon@fix/silent-include-failure` (commits `6abfad34`,
-  `cd8cc2a1`).
+  `third_party/xkbcommon@fix/silent-include-failure` (commits `e4cca2fc`,
+  `edcd9537`).
 - xkbcommon submodule pin — still on `b1a8c03c` on the kalamine
-  `feat/xkbcommon-analysis` branch. Bump that pin to `cd8cc2a1` (or merge
+  `feat/xkbcommon-analysis` branch. Bump that pin to `edcd9537` (or merge
   the fix branch and bump) when ready to land.
 - Kalamine `fix/xkalamine-wayland` — keep as-is.
 - Suggested next: send the xkbcommon fix branch upstream as a PR. The fix

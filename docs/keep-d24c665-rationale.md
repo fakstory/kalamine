@@ -4,7 +4,7 @@ Commit `d24c665` ("fix: xkalamine install/remove on Wayland") on
 `fix/xkalamine-wayland` stops kalamine from writing
 `~/.config/xkb/rules/evdev` in user-mode installs. After landing the
 xkbcommon fix in `third_party/xkbcommon@fix/silent-include-failure`
-(commits `6abfad34` + `cd8cc2a1`), the canonical user rules content
+(commits `e4cca2fc` + `edcd9537`), the canonical user rules content
 `! include %S/evdev` works correctly. The natural question is: should
 we revert `d24c665` and let kalamine write the user rules file again?
 
