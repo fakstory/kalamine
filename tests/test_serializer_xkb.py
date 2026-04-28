@@ -1,3 +1,5 @@
+import tomllib
+from pathlib import Path
 from textwrap import dedent
 
 from kalamine import KeyboardLayout
@@ -249,3 +251,29 @@ def test_prog():
     xkbpatch = xkb_table(layout, xkbcomp=False)
     assert len(xkbpatch) == len(expected)
     assert xkbpatch == expected
+
+
+FIXTURE_1DK_LOCK = Path(__file__).parent / "fixtures" / "1dk_lock.toml"
+
+
+def test_intl_with_1dk_lock():
+    with FIXTURE_1DK_LOCK.open("rb") as f:
+        layout = KeyboardLayout(tomllib.load(f))
+
+    assert layout.lock_1dk is True
+    assert layout.has_1dk is True
+
+    output = "\n".join(xkb_table(layout, xkbcomp=False))
+    assert "latchToLock" in output
+    assert "actions[Group1]" in output
+    assert "LatchMods(modifiers=LevelThree,latchToLock,clearLocks)" in output
+
+
+def test_intl_without_1dk_lock():
+    layout = load_layout("intl")
+
+    assert layout.lock_1dk is False
+
+    output = "\n".join(xkb_table(layout, xkbcomp=False))
+    assert "latchToLock" not in output
+    assert "actions[Group1]" not in output

@@ -24,7 +24,11 @@ def xkb_table(layout: "KeyboardLayout", xkbcomp: bool = False) -> List[str]:
     show_description = True
     eight_level = layout.has_altgr and layout.has_1dk and not xkbcomp
     odk_symbol = "ISO_Level5_Latch" if eight_level else "ISO_Level3_Latch"
+    level_modifier = "LevelFive" if eight_level else "LevelThree"
+    odk_action = f"LatchMods(modifiers={level_modifier},latchToLock,clearLocks)"
+    lock_1dk = getattr(layout, "lock_1dk", False) and layout.has_1dk
     max_length = 16  # `ISO_Level3_Latch` should be the longest symbol name
+    action_width = len(odk_action)  # pad NoAction() to align with odk_action
 
     output: List[str] = []
     for key_name in LAYER_KEYS:
@@ -36,6 +40,8 @@ def xkb_table(layout: "KeyboardLayout", xkbcomp: bool = False) -> List[str]:
 
         descs = []
         symbols = []
+        actions = []
+        has_odk = False
         for layer in layout.layers.values():
             if key_name in layer:
                 keysym = layer[key_name]
@@ -56,9 +62,17 @@ def xkb_table(layout: "KeyboardLayout", xkbcomp: bool = False) -> List[str]:
 
             descs.append(desc)
             symbols.append(symbol.ljust(max_length))
+            if symbol == odk_symbol:
+                actions.append(odk_action.ljust(action_width))
+                has_odk = True
+            else:
+                actions.append("NoAction()".ljust(action_width))
 
         key = "{{[ {0}, {1}, {2}, {3}]}}"  # 4-level layout by default
         description = "{0} {1} {2} {3}"
+        # parallel templates used for the lock_1dk multi-line block:
+        symbols_tpl = "[ {0}, {1}, {2}, {3} ]"
+        actions_tpl = "[ {0}, {1}, {2}, {3} ]"
         if layout.has_altgr and layout.has_1dk:
             # 6 layers are needed: they won't fit on the 4-level format.
             if xkbcomp:  # user-space XKB keymap file (standalone)
@@ -66,16 +80,36 @@ def xkb_table(layout: "KeyboardLayout", xkbcomp: bool = False) -> List[str]:
                 # one 4-level group for base+1dk, one two-level group for AltGr
                 key = "{{[ {}, {}, {}, {}],[ {}, {}]}}"
                 description = "{} {} {} {} {} {}"
+                symbols_tpl = (
+                    "[ {0}, {1}, {2}, {3} ],\n"
+                    "  symbols[Group2] = [ {4}, {5} ]"
+                )
+                actions_tpl = (
+                    "[ {0}, {1}, {2}, {3} ],\n"
+                    "  actions[Group2] = [ {4}, {5} ]"
+                )
             else:  # eight_level XKB symbols (Neo-like)
                 key = "{{[ {0}, {1}, {4}, {5}, {2}, {3}]}}"
                 description = "{0} {1} {4} {5} {2} {3}"
+                symbols_tpl = "[ {0}, {1}, {4}, {5}, {2}, {3} ]"
+                actions_tpl = "[ {0}, {1}, {4}, {5}, {2}, {3} ]"
         elif layout.has_altgr:
             del symbols[3]
             del symbols[2]
             del descs[3]
             del descs[2]
+            del actions[3]
+            del actions[2]
 
-        line = f"key <{key_name.upper()}> {key.format(*symbols)};"
+        if lock_1dk and has_odk:
+            line = (
+                f"key <{key_name.upper()}> {{\n"
+                f"  symbols[Group1] = {symbols_tpl.format(*symbols)},\n"
+                f"  actions[Group1] = {actions_tpl.format(*actions)}\n"
+                f"}};"
+            )
+        else:
+            line = f"key <{key_name.upper()}> {key.format(*symbols)};"
         if show_description:
             line += (" // " + description.format(*descs)).rstrip()
             if line.endswith("\\"):
