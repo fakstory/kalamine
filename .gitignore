@@ -114,5 +114,7 @@ ENV/
 # local third-party clones
 third_party/
 
-# user-specific fixture symlinks
+# user-specific fixture symlinks (bepo-extended via the kalamine/ symlink
+# tree pointing at ~/.config/katanyx/kalamine/)
 tests/fixtures/bepo-extended.toml
+tests/fixtures/kalamine/
