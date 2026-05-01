@@ -10,6 +10,7 @@ if TYPE_CHECKING:
 
 from ..template import load_tpl, substitute_lines
 from ..utils import DK_INDEX, LAYER_KEYS, SCAN_CODES, Layer, hex_ord
+from . import dk_fallback
 
 
 def _xml_proof(char: str) -> str:
@@ -27,6 +28,12 @@ def macos_keymap(layout: "KeyboardLayout") -> List[List[str]]:
 
     if layout.qwerty_shortcuts:
         print("WARN: keeping qwerty shortcuts is not yet supported for MacOS")
+
+    if dk_fallback.has_any_dk_overlay(layout):
+        print(dk_fallback.warning_text("macOS"))
+        dk_fallback.apply_fallback_to_layers(
+            layout, [Layer.BASE, Layer.SHIFT, Layer.ALTGR, Layer.ALTGR_SHIFT]
+        )
 
     ret_str = []
     for index in range(5):

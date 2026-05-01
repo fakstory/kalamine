@@ -46,9 +46,21 @@ class Layer(IntEnum):
     ODK_SHIFT = 3
     ALTGR = 4
     ALTGR_SHIFT = 5
+    DK2 = 6
+    DK2_SHIFT = 7
+    DK2_ALTGR = 8
+    DK2_ALTGR_SHIFT = 9
+    DK3 = 10
+    DK3_SHIFT = 11
+    DK3_ALTGR = 12
+    DK3_ALTGR_SHIFT = 13
 
     def next(self) -> "Layer":
-        """The next layer in the layer ordering."""
+        """The shift counterpart of a base-position layer.
+
+        Used in `_parse_template` after parsing the base half of a cell
+        to access the shift half. Only valid on even-numbered layers.
+        """
         return Layer(int(self) + 1)
 
     def necromance(self) -> "Layer":
@@ -108,6 +120,20 @@ for dk in DEAD_KEYS:
 SCAN_CODES = load_data("scan_codes")
 
 ODK_ID = "**"  # must match the value in dead_keys.yaml
+
+# Synthetic IDs for the additional dead-key overlay layers (2dk, 3dk).
+# Stored in the BASE layer at the trigger key's physical position.
+DK2_ID = "%%"  # internal marker — never appears in user TOML
+DK3_ID = "@@"  # internal marker — never appears in user TOML
+
+# Registry of additional dk layers. To add a 4dk: append 4 enum entries
+# (Layer.DK4{,_SHIFT,_ALTGR,_ALTGR_SHIFT}), define DK4_ID, append a tuple.
+# See .docs/2dk.md for the full design.
+DK_LAYERS = [
+    # (toml_key, layer_id, base_marker, altgr_marker, base_layer, vmod_name)
+    ("2dk", DK2_ID, "++", "--", Layer.DK2, "DK2"),
+    ("3dk", DK3_ID, "&&", "§§", Layer.DK3, "DK3"),
+]
 
 LAYER_KEYS = [
     "- Digits",

@@ -107,3 +107,12 @@ ENV/
 
 # vscode
 .vscode
+
+# local planning notes
+.docs/
+
+# local third-party clones
+third_party/
+
+# user-specific fixture symlinks
+tests/fixtures/bepo-extended.toml
