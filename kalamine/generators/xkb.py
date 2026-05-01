@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, List
 if TYPE_CHECKING:
     from ..layout import KeyboardLayout
 
+from . import xkb_1dk_lock
 from ..template import load_tpl, substitute_lines
 from ..utils import DK_INDEX, LAYER_KEYS, ODK_ID, hex_ord, load_data
 
@@ -26,6 +27,10 @@ def xkb_table(layout: "KeyboardLayout", xkbcomp: bool = False) -> List[str]:
     odk_symbol = "ISO_Level5_Latch" if eight_level else "ISO_Level3_Latch"
     max_length = 16  # `ISO_Level3_Latch` should be the longest symbol name
 
+    lock_1dk = xkb_1dk_lock.is_enabled(layout)
+    odk_action = xkb_1dk_lock.odk_action(eight_level) if lock_1dk else ""
+    action_width = len(odk_action)
+
     output: List[str] = []
     for key_name in LAYER_KEYS:
         if key_name.startswith("-"):  # separator
@@ -36,6 +41,8 @@ def xkb_table(layout: "KeyboardLayout", xkbcomp: bool = False) -> List[str]:
 
         descs = []
         symbols = []
+        actions: List[str] = []
+        has_odk = False
         for layer in layout.layers.values():
             if key_name in layer:
                 keysym = layer[key_name]
@@ -56,6 +63,12 @@ def xkb_table(layout: "KeyboardLayout", xkbcomp: bool = False) -> List[str]:
 
             descs.append(desc)
             symbols.append(symbol.ljust(max_length))
+            if lock_1dk:
+                actions.append(
+                    xkb_1dk_lock.action_for(symbol, odk_symbol, odk_action, action_width)
+                )
+                if symbol == odk_symbol:
+                    has_odk = True
 
         key = "{{[ {0}, {1}, {2}, {3}]}}"  # 4-level layout by default
         description = "{0} {1} {2} {3}"
@@ -74,8 +87,16 @@ def xkb_table(layout: "KeyboardLayout", xkbcomp: bool = False) -> List[str]:
             del symbols[2]
             del descs[3]
             del descs[2]
+            if lock_1dk:
+                del actions[3]
+                del actions[2]
 
-        line = f"key <{key_name.upper()}> {key.format(*symbols)};"
+        if lock_1dk and has_odk:
+            line = xkb_1dk_lock.format_key_block(
+                key_name, symbols, actions, layout, xkbcomp
+            )
+        else:
+            line = f"key <{key_name.upper()}> {key.format(*symbols)};"
         if show_description:
             line += (" // " + description.format(*descs)).rstrip()
             if line.endswith("\\"):
