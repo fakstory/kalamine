@@ -121,16 +121,59 @@ SCAN_CODES = load_data("scan_codes")
 
 ODK_ID = "**"  # must match the value in dead_keys.yaml
 
-# Synthetic IDs for the additional dead-key overlay layers (2dk, 3dk).
-# Stored in the BASE layer at the trigger key's physical position.
+# --- Additional dead-key overlay layers (2dk, 3dk, ...) ----------------
+#
+# Each entry in DK_LAYERS defines one paired-trigger overlay analogous
+# to 1dk: a full 4-level layer (base / shift / altgr / altgr_shift)
+# reached via two doubled-marker triggers in the `base` template.
+#
+#   - The first marker (`++`, `&&`) latches the dk's base+shift half.
+#   - The second marker (`--`, `§§`) latches the dk's altgr half.
+#   - Double-tap of either marker promotes the latch to a lock.
+#
+# DK2_ID / DK3_ID are reserved synthetic identifiers. They are NOT
+# currently stored in any layer (the trigger cells hold the marker
+# strings themselves so generators can distinguish base-half vs altgr-
+# half triggers), but the constants are kept for future use if a
+# generator ever needs a single canonical id per dk pair.
+#
+# # HOW TO ADD A NEW dk LAYER (e.g. 4dk with markers `==` / `##`)
+#
+#   1. Append four entries to `Layer(IntEnum)` above:
+#         DK4 = 14
+#         DK4_SHIFT = 15
+#         DK4_ALTGR = 16
+#         DK4_ALTGR_SHIFT = 17
+#   2. Define a synthetic id (kept symmetric with DK2_ID / DK3_ID):
+#         DK4_ID = "##"   # (or any 2-char internal marker not in user TOML)
+#   3. Append one tuple to DK_LAYERS below — the format is fixed and
+#      consumed by `layout.py` (parser), `generators/xkb_2dk.py` (XKB
+#      vmod emission), and `generators/dk_fallback.py` (Mac/Win fallback).
+#         ("4dk", DK4_ID, "==", "##", Layer.DK4, "DK4"),
+#   4. The parser (`_parse_template` in layout.py) reads the marker
+#      chars from this registry — no further parser change is needed
+#      as long as the markers are non-overlapping single-char prefixes.
+#   5. XKB caps at ~8 levels per type; the vmod design works fine up to
+#      4 dk overlays in principle, but watch real-mod budget on Linux
+#      (see comments in generators/xkb_2dk.py).
+#
+# Deliberately NOT a TOML-driven registry — adding a dk overlay is a
+# code change so that the marker chars, layer enum entries, and
+# generator dispatch all stay in lockstep.
 DK2_ID = "%%"  # internal marker — never appears in user TOML
 DK3_ID = "@@"  # internal marker — never appears in user TOML
 
-# Registry of additional dk layers. To add a 4dk: append 4 enum entries
-# (Layer.DK4{,_SHIFT,_ALTGR,_ALTGR_SHIFT}), define DK4_ID, append a tuple.
-# See .docs/2dk.md for the full design.
 DK_LAYERS = [
     # (toml_key, layer_id, base_marker, altgr_marker, base_layer, vmod_name)
+    #   toml_key      — top-level TOML key holding the overlay template
+    #   layer_id      — synthetic id (currently unused at runtime; reserved)
+    #   base_marker   — doubled-marker that triggers the base+shift half
+    #   altgr_marker  — doubled-marker that triggers the altgr half
+    #   base_layer    — first of the four `Layer` slots for this overlay
+    #                   (the other three are int(base_layer)+1..+3)
+    #   vmod_name     — XKB virtual modifier name; appears in the
+    #                   generated `virtual_modifiers ...;` declaration
+    #                   and in the `KALAMINE_<vmod>` custom type.
     ("2dk", DK2_ID, "++", "--", Layer.DK2, "DK2"),
     ("3dk", DK3_ID, "&&", "§§", Layer.DK3, "DK3"),
 ]
