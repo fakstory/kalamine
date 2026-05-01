@@ -107,3 +107,7 @@ ENV/
 
 # vscode
 .vscode
+
+#local
+third_party
+.docs/

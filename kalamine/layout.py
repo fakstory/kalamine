@@ -156,7 +156,6 @@ class KeyboardLayout:
         self.meta = CONFIG.copy()  # default parameters, hardcoded
         self.has_altgr = False
         self.has_1dk = False
-        self.lock_1dk: bool = False
         self.qwerty_shortcuts = qwerty_shortcuts
         self.angle_mod = angle_mod
 
@@ -173,10 +172,6 @@ class KeyboardLayout:
             layout_data["name8"] if "name8" in layout_data else self.meta["name"][0:8]
         )
         self.meta["fileName"] = self.meta["name8"].lower()
-
-        # Latch-to-lock for the 1dk key (Linux/XKB only — see generators/xkb.py).
-        if "1dk_lock" in self.meta:
-            self.lock_1dk = bool(self.meta["1dk_lock"])
 
         # keyboard layers: self.layers & self.dead_keys
         rows = copy.deepcopy(GEOMETRY[self.meta["geometry"]].rows)

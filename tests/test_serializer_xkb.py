@@ -260,7 +260,7 @@ def test_intl_with_1dk_lock():
     with FIXTURE_1DK_LOCK.open("rb") as f:
         layout = KeyboardLayout(tomllib.load(f))
 
-    assert layout.lock_1dk is True
+    assert layout.meta.get("1dk_lock") is True
     assert layout.has_1dk is True
 
     output = "\n".join(xkb_table(layout, xkbcomp=False))
@@ -272,7 +272,7 @@ def test_intl_with_1dk_lock():
 def test_intl_without_1dk_lock():
     layout = load_layout("intl")
 
-    assert layout.lock_1dk is False
+    assert layout.meta.get("1dk_lock", False) is False
 
     output = "\n".join(xkb_table(layout, xkbcomp=False))
     assert "latchToLock" not in output
