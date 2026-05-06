@@ -9,9 +9,9 @@ from typing import TYPE_CHECKING, List
 if TYPE_CHECKING:
     from ..layout import KeyboardLayout
 
-from . import xkb_1dk_lock
 from ..template import load_tpl, substitute_lines
 from ..utils import DK_INDEX, LAYER_KEYS, ODK_ID, hex_ord, load_data
+from . import xkb_1dk_lock
 
 XKB_KEY_SYM = load_data("key_sym")
 
