@@ -20,7 +20,6 @@ from kalamine import KeyboardLayout
 from kalamine.generators.xkb import xkb_table
 from kalamine.utils import Layer
 
-
 FIXTURE = Path(__file__).parent / "fixtures" / "2dk_full.toml"
 
 
@@ -74,7 +73,7 @@ def test_xkb_q_block_has_eight_levels_in_order():
     #   q, Q, 1, 2, α (U03B1), Α (U0391), 3, 4
     # Our generator emits Greek glyphs as U-encoded keysyms because they
     # don't match `XKB_KEY_SYM`. Latin/digit glyphs use their named keysyms.
-    assert "type[Group1] = \"KALAMINE_DK2\"" in block
+    assert 'type[Group1] = "KALAMINE_DK2"' in block
     sym_line = [line for line in block.splitlines() if "symbols[Group1]" in line][0]
 
     expected_tokens = [

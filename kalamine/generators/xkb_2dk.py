@@ -42,7 +42,6 @@ if TYPE_CHECKING:
 
 from ..utils import DK_LAYERS, Layer
 
-
 # `LatchMods(modifiers=...)` strings line up with the longest legacy
 # action so multi-line emission columns stay aligned.
 _NO_ACTION = "NoAction()"

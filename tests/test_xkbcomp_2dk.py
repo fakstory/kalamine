@@ -19,7 +19,6 @@ import pytest
 from kalamine import KeyboardLayout
 from kalamine.generators.xkb import xkb_table
 
-
 FIXTURE_2DK = Path(__file__).parent / "fixtures" / "2dk.toml"
 
 XKBCOMP = shutil.which("xkbcomp")
@@ -68,8 +67,7 @@ def test_2dk_xkbcomp_accepts_generated_keymap(tmp_path):
     assert result.returncode == 0, (
         f"xkbcomp rejected the 2dk keymap.\n"
         f"--- stderr ---\n{result.stderr}\n"
-        f"--- keymap (first 80 lines) ---\n"
-        + "\n".join(keymap_text.splitlines()[:80])
+        f"--- keymap (first 80 lines) ---\n" + "\n".join(keymap_text.splitlines()[:80])
     )
     # No silent warnings either — strict.
     assert "Warning" not in result.stderr, (
@@ -96,6 +94,5 @@ def test_legacy_intl_xkbcomp_unaffected(tmp_path):
         text=True,
     )
     assert result.returncode == 0, (
-        f"xkbcomp rejected the intl keymap (regression).\n"
-        f"stderr:\n{result.stderr}"
+        f"xkbcomp rejected the intl keymap (regression).\nstderr:\n{result.stderr}"
     )
