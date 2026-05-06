@@ -3,7 +3,7 @@
 from contextlib import contextmanager
 from importlib import metadata
 from pathlib import Path
-from typing import Iterator, List, Literal, Union
+from typing import Iterator, List, Literal, Optional, Union
 
 import click
 
@@ -20,7 +20,7 @@ def cli() -> None: ...
 def build_all(
     layout: KeyboardLayout,
     output_dir_path: Path,
-    layout_path: Path,
+    layout_path: Optional[Path] = None,
     add_merged_file: bool = False,
 ) -> None:
     """Generate all layout output files.
@@ -31,8 +31,12 @@ def build_all(
         The layout to process.
     output_dir_path : Path
         The output directory.
-    msklc_dir : Path
-        The MSKLC installation directory.
+    layout_path : Path, optional
+        The TOML/YAML descriptor path. Required when ``add_merged_file`` is True
+        so the source descriptors can be copied alongside the merged output.
+    add_merged_file : bool
+        When True, copy the original (and parent, if any) TOML descriptor into
+        a ``<fileName>/`` subdirectory next to a fully-merged TOML.
     """
 
     @contextmanager
@@ -83,6 +87,10 @@ def build_all(
         web.svg(layout).write(svg_path, encoding="utf-8", xml_declaration=True)
 
     if add_merged_file:
+        if layout_path is None:
+            raise ValueError(
+                "build_all(add_merged_file=True) requires layout_path"
+            )
         output_subdir = output_dir_path / layout.meta["fileName"]
         toml_out.write_split_toml(layout, layout_path, output_subdir)
         click.echo(f"... {output_subdir}")
