@@ -14,7 +14,6 @@ from kalamine.utils import DK2_ID, DK_LAYERS, Layer
 
 from .util import get_layout_dict
 
-
 FIXTURE_2DK = Path(__file__).parent / "fixtures" / "2dk.toml"
 
 

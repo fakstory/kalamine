@@ -34,9 +34,7 @@ def _marker_set() -> Dict[str, str]:
 _MARKERS = _marker_set()
 
 
-def apply_fallback_to_layers(
-    layout: "KeyboardLayout", layers: Iterable[Layer]
-) -> None:
+def apply_fallback_to_layers(layout: "KeyboardLayout", layers: Iterable[Layer]) -> None:
     """In-place: replace any dk-marker cell with its fallback char.
 
     Generators call this *before* iterating layers when they can't emit
