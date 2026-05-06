@@ -141,7 +141,7 @@ class XKBManager:
             return
 
         # ensure all expected directories exist (don't care about 'geometry')
-        XKB_HOME.mkdir(exist_ok=True)
+        XKB_HOME.mkdir(parents=True, exist_ok=True)
         for subdir in ["compat", "keycodes", "rules", "symbols", "types"]:
             (XKB_HOME / subdir).mkdir(exist_ok=True)
 

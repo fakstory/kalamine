@@ -14,6 +14,11 @@ from .layout import KeyboardLayout, load_layout
 from .xkb_manager import WAYLAND, KbdIndex, XKBManager
 
 
+def is_root() -> bool:
+    """Check if running as root (euid 0)."""
+    return os.geteuid() == 0
+
+
 @click.group()
 def cli() -> None:
     if platform.system() != "Linux":
@@ -84,61 +89,36 @@ def install(layouts: List[Path], angle_mod: bool, yes: bool) -> None:
         print("Successfully installed.")
         return dict(index)
 
-
-def is_root() -> bool:
-    """Check if running as root (euid 0)."""
-    import os
-    return os.geteuid() == 0
-
-
-# EAFP (Easier to Ask Forgiveness than Permission)
+    # EAFP (Easier to Ask Forgiveness than Permission)
+    xkb_root = XKBManager(root=True)
     try:
-        xkb_root = XKBManager(root=True)
         xkb_index = xkb_install(xkb_root)
         print(f"On XOrg, you can try the layout{'s' if len(layouts) > 1 else ''} with:")
         for locale, variants in xkb_index.items():
             for name in variants.keys():
                 print(f"    setxkbmap {locale} -variant {name}")
         print()
+        return
 
     except PermissionError:
-        if not is_root():
-            if not WAYLAND:
-                print(xkb_root.path)
-                print("    Not writable: sudo required.")
-                print(
-                    "You appear to be running XOrg. You need sudo privileges to install keyboard layouts:"
-                )
-                print("Use sudo to install:")
-                for filepath in layouts:
-                    print(f'    sudo env "PATH=$PATH" xkalamine install {filepath}')
-                sys.exit(1)
+        if is_root():
+            # Running as root but the system XKB tree is not writable.
+            print(xkb_root.path)
+            print("    Not writable even as root.")
+            print("This is an environment configuration issue.")
+            sys.exit(1)
 
-            # Not root but on Wayland → try user-space
-            xkb_home = XKBManager()
-            xkb_home.ensure_xkb_config_is_ready()
+        if not WAYLAND:
+            print(xkb_root.path)
+            print("    Not writable: sudo required.")
+            print(
+                "You appear to be running XOrg. You need sudo privileges to install keyboard layouts:"
+            )
+            for filepath in layouts:
+                print(f'    sudo env "PATH=$PATH" xkalamine install {filepath}')
+            sys.exit(1)
 
-            if not yes:
-                click.confirm(
-                    "Install in user-space (~/.config/xkb)? "
-                    "Layout will be available in your compositor's keyboard settings.",
-                    abort=True,
-                )
-
-            xkb_install(xkb_home)
-            print("User-space layout installed. Select it in your compositor's keyboard settings.")
-            print()
-            return
-
-        # is_root() but PermissionError
-        print(xkb_root.path)
-        print("    Not writable: sudo required.")
-        print("Use sudo for system-wide install:")
-        for filepath in layouts:
-            print(f'    sudo xkalamine install {filepath}')
-        sys.exit(1)
-        xkb_home.ensure_xkb_config_is_ready()
-
+        # Not root, on Wayland → user-space install.
         if not yes:
             click.confirm(
                 "Install in user-space (~/.config/xkb)? "
@@ -146,6 +126,8 @@ def is_root() -> bool:
                 abort=True,
             )
 
+        xkb_home = XKBManager()
+        xkb_home.ensure_xkb_config_is_ready()
         xkb_install(xkb_home)
         print("User-space layout installed. Select it in your compositor's keyboard settings.")
         print()
@@ -173,7 +155,7 @@ def remove(mask: str) -> None:
                 print(
                     "You appear to be running XOrg. You need sudo privileges to remove keyboard layouts:"
                 )
-                print(f"Use sudo to remove:")
+                print("Use sudo to remove:")
                 print(f'    sudo env "PATH=$PATH" xkalamine remove {mask}')
                 sys.exit(1)
 
