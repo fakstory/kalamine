@@ -11,6 +11,13 @@ After checking out the repository, you can install kalamine and its development 
 python3 -m pip install --user .[dev]
 ```
 
+If you plan to work on the xkbcommon analysis (see `third_party/xkbcommon`),
+initialize the submodule:
+
+```bash
+git submodule update --init --recursive
+```
+
 Which is the equivalent of:
 
 ```bash
