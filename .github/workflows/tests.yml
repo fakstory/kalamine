@@ -56,7 +56,7 @@ jobs:
           pytest
 
       - name: Run ruff
-        run: ruff check kalamine
+        run: ruff check kalamine tests
 
       - name: Run mypy
         run: mypy kalamine

@@ -25,9 +25,9 @@ classifiers = [
 requires-python = ">= 3.11"
 dependencies = [
     "click>=8.0",
-    "livereload",
-    "pyyaml",
-    "progress",
+    "livereload>=2.6",
+    "pyyaml>=6.0",
+    "progress>=1.6",
 ]
 
 [project.optional-dependencies]

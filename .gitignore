@@ -107,3 +107,8 @@ ENV/
 
 # vscode
 .vscode
+
+#local
+third_party
+.docs/
+tests/fixtures/bepo-extended.toml

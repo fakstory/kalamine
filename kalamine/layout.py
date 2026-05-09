@@ -210,11 +210,10 @@ class KeyboardLayout:
                 spc[k] = layout_data["spacebar"][k]
         self.layers[Layer.BASE]["spce"] = " "
         self.layers[Layer.SHIFT]["spce"] = spc["shift"]
-        if True or self.has_1dk:  # XXX self.has_1dk is not defined yet
-            self.layers[Layer.ODK]["spce"] = spc["1dk"]
-            self.layers[Layer.ODK_SHIFT]["spce"] = (
-                spc["shift_1dk"] if "shift_1dk" in spc else spc["1dk"]
-            )
+        self.layers[Layer.ODK]["spce"] = spc["1dk"]
+        self.layers[Layer.ODK_SHIFT]["spce"] = (
+            spc["shift_1dk"] if "shift_1dk" in spc else spc["1dk"]
+        )
         if self.has_altgr:
             self.layers[Layer.ALTGR]["spce"] = spc["altgr"]
             self.layers[Layer.ALTGR_SHIFT]["spce"] = spc["altgr_shift"]

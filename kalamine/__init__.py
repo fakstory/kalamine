@@ -2,5 +2,4 @@
 from .layout import KeyboardLayout
 from .xkb_manager import XKBManager
 
-KeyboardLayout
-XKBManager
+__all__ = ["KeyboardLayout", "XKBManager"]
