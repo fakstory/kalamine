@@ -1,0 +1,70 @@
+name = "qwerty-2dk-full"
+name8 = "q-2df"
+locale = "us"
+variant = "2dk-full"
+description = "QWERTY base+altgr (via `full`) + 2dk overlay exercising all 8 levels"
+url = "https://OneDeadKey.github.com/kalamine/"
+version = "1.0.0"
+geometry = "ISO"
+
+# Goal: every level (1-8) of the `KALAMINE_DK2` custom type carries a
+# distinct, easily distinguishable glyph on a single key (Q, AD01).
+# Tests pin each level so an off-by-one in `_parse_template`
+# (col_offset for DK2 vs DK2_ALTGR) or in
+# `xkb_2dk.collect_eight_level_symbols` is caught.
+#
+# Cell encoding (same as the existing `full` template):
+#   inner-left position  → BASE half (BASE/SHIFT or DK2/DK2_SHIFT)
+#   inner-right position → ALTGR half (ALTGR/ALTGR_SHIFT or DK2_ALTGR/DK2_ALTGR_SHIFT)
+#
+# Q (AD01) layer plan:
+#   level 1 (base)              → q
+#   level 2 (shift)             → Q
+#   level 3 (altgr)             → 1
+#   level 4 (altgr+shift)       → 2
+#   level 5 (DK2 base)          → α
+#   level 6 (DK2 shift)         → Α
+#   level 7 (DK2 altgr)         → 3
+#   level 8 (DK2 altgr+shift)   → 4
+#
+# Trigger key W carries `++` (base) and `--` (shift).
+
+full = '''
+┌─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┲━━━━━━━━━━┓
+│ ~   │ !   │ @   │ #   │ $   │ %   │ ^   │ &   │ *   │ (   │ )   │ _   │ +   ┃          ┃
+│ `   │ 1   │ 2   │ 3   │ 4   │ 5   │ 6   │ 7   │ 8   │ 9   │ 0   │ -   │ =   ┃ ⌫        ┃
+┢━━━━━┷━━┱──┴──┬──┴──┬──┴──┬──┴──┬──┴──┬──┴──┬──┴──┬──┴──┬──┴──┬──┴──┬──┴──┬──┺━━┳━━━━━━━┫
+┃        ┃ Q 2 │--   │ E   │ R   │ T   │ Y   │ U   │ I   │ O   │ P   │ {   │ }   ┃       ┃
+┃ ↹      ┃ q 1 │++   │ e   │ r   │ t   │ y   │ u   │ i   │ o   │ p   │ [   │ ]   ┃       ┃
+┣━━━━━━━━┻┱────┴┬────┴┬────┴┬────┴┬────┴┬────┴┬────┴┬────┴┬────┴┬────┴┬────┴┬────┺┓  ⏎   ┃
+┃         ┃ A   │ S   │ D   │ F   │ G   │ H   │ J   │ K   │ L   │ :   │ "   │ |   ┃      ┃
+┃ ⇬       ┃ a   │ s   │ d   │ f   │ g   │ h   │ j   │ k   │ l   │ ;   │ '   │ \   ┃      ┃
+┣━━━━━━┳━━┹──┬──┴──┬──┴──┬──┴──┬──┴──┬──┴──┬──┴──┬──┴──┬──┴──┬──┴──┬──┴──┲━━┷━━━━━┻━━━━━━┫
+┃      ┃ |   │ Z   │ X   │ C   │ V   │ B   │ N   │ M   │ <   │ >   │ ?   ┃               ┃
+┃ ⇧    ┃ \   │ z   │ x   │ c   │ v   │ b   │ n   │ m   │ ,   │ .   │ /   ┃ ⇧             ┃
+┣━━━━━━┻┳━━━━┷━━┳━━┷━━━━┱┴─────┴─────┴─────┴─────┴─────┴─┲━━━┷━━━┳━┷━━━━━╋━━━━━━━┳━━━━━━━┫
+┃       ┃       ┃       ┃                                ┃       ┃       ┃       ┃       ┃
+┃ Ctrl  ┃ super ┃ Alt   ┃ ␣                              ┃ Alt   ┃ super ┃ menu  ┃ Ctrl  ┃
+┗━━━━━━━┻━━━━━━━┻━━━━━━━┹────────────────────────────────┺━━━━━━━┻━━━━━━━┻━━━━━━━┻━━━━━━━┛
+'''
+
+# 2dk template uses the same cell encoding as `full`:
+# inner-left = DK2 base half (levels 5-6), inner-right = DK2 altgr half (levels 7-8).
+2dk = '''
+┌─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┲━━━━━━━━━━┓
+│     │     │     │     │     │     │     │     │     │     │     │     │     ┃          ┃
+│     │     │     │     │     │     │     │     │     │     │     │     │     ┃ ⌫        ┃
+┢━━━━━┷━━┱──┴──┬──┴──┬──┴──┬──┴──┬──┴──┬──┴──┬──┴──┬──┴──┬──┴──┬──┴──┬──┴──┬──┺━━┳━━━━━━━┫
+┃        ┃ Α 4 │     │     │     │     │     │     │     │     │     │     │     ┃       ┃
+┃ ↹      ┃ α 3 │     │     │     │     │     │     │     │     │     │     │     ┃       ┃
+┣━━━━━━━━┻┱────┴┬────┴┬────┴┬────┴┬────┴┬────┴┬────┴┬────┴┬────┴┬────┴┬────┴┬────┺┓  ⏎   ┃
+┃         ┃     │     │     │     │     │     │     │     │     │     │     │     ┃      ┃
+┃ ⇬       ┃     │     │     │     │     │     │     │     │     │     │     │     ┃      ┃
+┣━━━━━━┳━━┹──┬──┴──┬──┴──┬──┴──┬──┴──┬──┴──┬──┴──┬──┴──┬──┴──┬──┴──┬──┴──┲━━┷━━━━━┻━━━━━━┫
+┃      ┃     │     │     │     │     │     │     │     │     │     │     ┃               ┃
+┃ ⇧    ┃     │     │     │     │     │     │     │     │     │     │     ┃ ⇧             ┃
+┣━━━━━━┻┳━━━━┷━━┳━━┷━━━━┱┴─────┴─────┴─────┴─────┴─────┴─┲━━━┷━━━┳━┷━━━━━╋━━━━━━━┳━━━━━━━┫
+┃       ┃       ┃       ┃                                ┃       ┃       ┃       ┃       ┃
+┃ Ctrl  ┃ super ┃ Alt   ┃ ␣                              ┃ Alt   ┃ super ┃ menu  ┃ Ctrl  ┃
+┗━━━━━━━┻━━━━━━━┻━━━━━━━┹────────────────────────────────┺━━━━━━━┻━━━━━━━┻━━━━━━━┻━━━━━━━┛
+'''

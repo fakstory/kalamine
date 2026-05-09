@@ -10,10 +10,43 @@ if TYPE_CHECKING:
     from ..layout import KeyboardLayout
 
 from ..template import load_tpl, substitute_lines
-from ..utils import DK_INDEX, LAYER_KEYS, ODK_ID, hex_ord, load_data
-from . import xkb_1dk_lock
+from ..utils import DK_INDEX, LAYER_KEYS, ODK_ID, Layer, hex_ord, load_data
+from . import xkb_1dk_lock, xkb_2dk
 
 XKB_KEY_SYM = load_data("key_sym")
+
+
+def _legacy_symbol(
+    layout: "KeyboardLayout", layer: "Layer", key_name: str, max_length: int = 16
+) -> str:
+    """Resolve a single (layer, key) cell into its XKB symbol token.
+
+    Extracted so `xkb_2dk.collect_eight_level_symbols` can reuse the
+    same keysym-resolution logic without duplicating it.
+    """
+    layer_dict = layout.layers[layer]
+    if key_name not in layer_dict:
+        return "VoidSymbol".ljust(max_length)
+    keysym = layer_dict[key_name]
+    if keysym in DK_INDEX:
+        name = DK_INDEX[keysym].name
+        symbol = "ISO_Level3_Latch" if keysym == ODK_ID else f"dead_{name}"
+    elif keysym in XKB_KEY_SYM and len(XKB_KEY_SYM[keysym]) <= max_length:
+        symbol = XKB_KEY_SYM[keysym]
+    elif len(keysym) != 1:
+        # `hex_ord` only handles single codepoints. A multi-char keysym
+        # reaching here means a marker/value didn't go through its
+        # dedicated dispatch (typically a 2dk/3dk trigger marker on a
+        # layout that didn't activate has_dk2/has_dk3, or a brand-new
+        # marker type not yet handled). Fail loud rather than crash on
+        # `ord(...)` with an opaque TypeError.
+        raise ValueError(
+            f"unhandled multi-codepoint keysym {keysym!r} on key {key_name!r} "
+            f"(layer {layer.name})"
+        )
+    else:
+        symbol = f"U{hex_ord(keysym).upper()}"
+    return symbol.ljust(max_length)
 
 
 def xkb_table(layout: "KeyboardLayout", xkbcomp: bool = False) -> List[str]:
@@ -30,8 +63,29 @@ def xkb_table(layout: "KeyboardLayout", xkbcomp: bool = False) -> List[str]:
     lock_1dk = xkb_1dk_lock.is_enabled(layout)
     odk_action = xkb_1dk_lock.odk_action(eight_level) if lock_1dk else ""
     action_width = len(odk_action)
+    has_2dk = xkb_2dk.is_enabled(layout)
 
     output: List[str] = []
+    if has_2dk:
+        # Emit the virtual_modifiers declaration + custom 8-level types
+        # at the top of the LAYOUT block so they're in scope before any
+        # key block references them.
+        output.append(xkb_2dk.virtual_modifier_decl(layout))
+        output.extend(xkb_2dk.type_definitions(layout))
+        output.append("")
+
+    # Iterate only the legacy 6 layers so existing layouts stay byte-
+    # identical. The 2dk/3dk overlay layers are handled per-key via the
+    # `xkb_2dk` helper below.
+    legacy_layers = [
+        Layer.BASE,
+        Layer.SHIFT,
+        Layer.ODK,
+        Layer.ODK_SHIFT,
+        Layer.ALTGR,
+        Layer.ALTGR_SHIFT,
+    ]
+
     for key_name in LAYER_KEYS:
         if key_name.startswith("-"):  # separator
             if output:
@@ -39,11 +93,27 @@ def xkb_table(layout: "KeyboardLayout", xkbcomp: bool = False) -> List[str]:
             output.append("//" + key_name[1:])
             continue
 
+        # 2dk/3dk-bearing keys take a dedicated multi-line emission and
+        # skip the standard 4/6-level symbol formatting below.
+        if has_2dk:
+            typename = xkb_2dk.key_type_for(layout, key_name)
+            if typename is not None:
+                symbols, actions = xkb_2dk.collect_eight_level_symbols(
+                    layout,
+                    key_name,
+                    lambda layer, kn: _legacy_symbol(layout, layer, kn, max_length),
+                )
+                output.append(
+                    xkb_2dk.format_key_block(key_name, typename, symbols, actions)
+                )
+                continue
+
         descs = []
         symbols = []
         actions: List[str] = []
         has_odk = False
-        for layer in layout.layers.values():
+        for layer_index in legacy_layers:
+            layer = layout.layers[layer_index]
             if key_name in layer:
                 keysym = layer[key_name]
                 desc = keysym
@@ -55,6 +125,11 @@ def xkb_table(layout: "KeyboardLayout", xkbcomp: bool = False) -> List[str]:
                 # regular key: use a keysym if possible, utf-8 otherwise
                 elif keysym in XKB_KEY_SYM and len(XKB_KEY_SYM[keysym]) <= max_length:
                     symbol = XKB_KEY_SYM[keysym]
+                elif len(keysym) != 1:
+                    raise ValueError(
+                        f"unhandled multi-codepoint keysym {keysym!r} on key "
+                        f"{key_name!r} (layer {layer_index.name})"
+                    )
                 else:
                     symbol = f"U{hex_ord(keysym).upper()}"
             else:

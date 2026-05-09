@@ -10,12 +10,20 @@ import yaml
 
 from .utils import (
     DEAD_KEYS,
+    DK_LAYERS,
     LAYER_KEYS,
     ODK_ID,
     Layer,
     load_data,
     text_to_lines,
     upper_key,
+)
+
+# Single-char prefixes that mark a doubled-marker dk trigger (`++`, `--`,
+# `&&`, `§§`). `*` stays handled separately to preserve legacy 1dk and
+# `*X` dead-key syntax. See .docs/2dk.md.
+DK_MARKER_CHARS = tuple(spec[2][0] for spec in DK_LAYERS) + tuple(
+    spec[3][0] for spec in DK_LAYERS
 )
 
 ###
@@ -156,17 +164,15 @@ class KeyboardLayout:
         self.meta = CONFIG.copy()  # default parameters, hardcoded
         self.has_altgr = False
         self.has_1dk = False
+        self.has_dk2 = False
+        self.has_dk3 = False
         self.qwerty_shortcuts = qwerty_shortcuts
         self.angle_mod = angle_mod
 
         # metadata: self.meta
+        _template_keys = {"base", "full", "altgr"} | {spec[0] for spec in DK_LAYERS}
         for k in layout_data:
-            if (
-                k != "base"
-                and k != "full"
-                and k != "altgr"
-                and not isinstance(layout_data[k], dict)
-            ):
+            if k not in _template_keys and not isinstance(layout_data[k], dict):
                 self.meta[k] = layout_data[k]
         self.meta["name8"] = (
             layout_data["name8"] if "name8" in layout_data else self.meta["name"][0:8]
@@ -202,6 +208,21 @@ class KeyboardLayout:
                 self._parse_template(
                     text_to_lines(layout_data["altgr"]), rows, Layer.ALTGR
                 )
+
+        # Additional dk overlay layers (2dk, 3dk). Each is a 4-level overlay
+        # parsed like a `full` template — base/shift via col_offset=0, then
+        # altgr/altgr_shift via col_offset=2. See .docs/2dk.md.
+        for toml_key, _, base_marker, altgr_marker, base_layer, _ in DK_LAYERS:
+            has_marker = self._has_dk_marker_in_layout(base_marker, altgr_marker)
+            if not has_marker:
+                continue
+            attr_name = "has_dk2" if base_layer == Layer.DK2 else "has_dk3"
+            setattr(self, attr_name, True)
+            if toml_key in layout_data:
+                tpl = text_to_lines(layout_data[toml_key])
+                self._parse_template(tpl, rows, base_layer)
+                # base_layer + 2 = the *_ALTGR slot for that dk pair
+                self._parse_template(tpl, rows, Layer(int(base_layer) + 2))
 
         # space bar
         spc = SPACEBAR.copy()
@@ -271,13 +292,50 @@ class KeyboardLayout:
                 for space in all_spaces:
                     deadkey[space] = dk.alt_space
 
+    @staticmethod
+    def _cell_key(line: List[str], i: int) -> str:
+        """Read a single cell, recognizing prefix markers.
+
+        Legacy: `*X` (any X) means "dead key X" — preserved unchanged.
+        New: `++`, `--`, `&&`, `§§` (doubled marker only) means a dk
+        overlay trigger. Single non-`*` prefix chars followed by a
+        different glyph are treated as no-prefix (the marker char is
+        dropped, only the glyph kept).
+        """
+        prefix = line[i - 1]
+        if prefix == "*":
+            return "*" + line[i]
+        if prefix in DK_MARKER_CHARS and line[i] == prefix:
+            return prefix + line[i]
+        return line[i]
+
+    def _has_dk_marker_in_layout(self, base_marker: str, altgr_marker: str) -> bool:
+        """True if either of the pair's doubled markers appears in any of
+        the four legacy layers (BASE, SHIFT, ALTGR, ALTGR_SHIFT).
+
+        Called *after* the BASE/ALTGR templates have been parsed; the
+        synthetic dk markers are stored as cell values at the trigger keys.
+        Markers may live in `base`/`base_diff` (BASE/SHIFT) *or* in
+        `altgr`/`altgr_diff` (ALTGR/ALTGR_SHIFT) — both are valid.
+        """
+        for layer in (Layer.BASE, Layer.SHIFT, Layer.ALTGR, Layer.ALTGR_SHIFT):
+            for value in self.layers[layer].values():
+                if value == base_marker or value == altgr_marker:
+                    return True
+        return False
+
     def _parse_template(
         self, template: List[str], rows: List[RowDescr], layer_number: Layer
     ) -> None:
         """Extract a keyboard layer from a template."""
 
         j = 0
-        col_offset = 0 if layer_number == Layer.BASE else 2
+        # The base half (positions 0/1 in each cell) covers BASE+SHIFT and
+        # the BASE+SHIFT halves of the dk overlay layers (DK2, DK3).
+        # The altgr half (positions 2/3) covers ALTGR+ALTGR_SHIFT and ODK
+        # plus the *_ALTGR halves of dk overlays.
+        base_half_layers = {Layer.BASE, Layer.DK2, Layer.DK3}
+        col_offset = 0 if layer_number in base_half_layers else 2
         for row in rows:
             i = row.offset + col_offset
             keys = row.keys
@@ -286,8 +344,8 @@ class KeyboardLayout:
             shift = list(template[1 + j * 3])
 
             for key in keys:
-                base_key = ("*" if base[i - 1] == "*" else "") + base[i]
-                shift_key = ("*" if shift[i - 1] == "*" else "") + shift[i]
+                base_key = self._cell_key(base, i)
+                shift_key = self._cell_key(shift, i)
 
                 # in the BASE layer, if the base character is undefined, shift prevails
                 if base_key == " ":

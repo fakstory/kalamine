@@ -18,6 +18,7 @@ if TYPE_CHECKING:
 
 from ..template import load_tpl, substitute_lines, substitute_token
 from ..utils import DK_INDEX, LAYER_KEYS, SCAN_CODES, Layer, hex_ord, load_data
+from . import dk_fallback
 
 
 # return the corresponding char for a symbol
@@ -96,6 +97,12 @@ def klc_virtual_key(layout: "KeyboardLayout", symbols: list, scan_code: str) -> 
 
 def klc_keymap(layout: "KeyboardLayout") -> List[str]:
     """Windows layout, main part."""
+
+    if dk_fallback.has_any_dk_overlay(layout):
+        print(dk_fallback.warning_text("Windows klc"))
+        dk_fallback.apply_fallback_to_layers(
+            layout, [Layer.BASE, Layer.SHIFT, Layer.ALTGR, Layer.ALTGR_SHIFT]
+        )
 
     supported_symbols = "1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
