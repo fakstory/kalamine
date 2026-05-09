@@ -311,12 +311,15 @@ class KeyboardLayout:
         return line[i]
 
     def _has_dk_marker_in_layout(self, base_marker: str, altgr_marker: str) -> bool:
-        """True if either of the pair's doubled markers appears in BASE/SHIFT.
+        """True if either of the pair's doubled markers appears in any of
+        the four legacy layers (BASE, SHIFT, ALTGR, ALTGR_SHIFT).
 
-        Called *after* the BASE template has been parsed; the synthetic dk
-        markers are stored as cell values at the trigger keys.
+        Called *after* the BASE/ALTGR templates have been parsed; the
+        synthetic dk markers are stored as cell values at the trigger keys.
+        Markers may live in `base`/`base_diff` (BASE/SHIFT) *or* in
+        `altgr`/`altgr_diff` (ALTGR/ALTGR_SHIFT) — both are valid.
         """
-        for layer in (Layer.BASE, Layer.SHIFT):
+        for layer in (Layer.BASE, Layer.SHIFT, Layer.ALTGR, Layer.ALTGR_SHIFT):
             for value in self.layers[layer].values():
                 if value == base_marker or value == altgr_marker:
                     return True

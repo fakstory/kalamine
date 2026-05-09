@@ -112,7 +112,9 @@ def test_xkb_q_actions_are_all_noaction():
 
 def test_xkb_w_trigger_has_latchmods_at_levels_1_and_2():
     """W (AD02) is the trigger: BASE = `--` (altgr-half latch), SHIFT = `++`
-    (base-half latch). Levels 3-8 should be NoAction().
+    (base-half latch). Levels 3-8 should be NoAction(). Trigger cells
+    emit a plain LatchMods (no `latchToLock`); locking is handled on a
+    separate dk-overlay lock-promoter cell.
     """
     layout = _layout()
     out = "\n".join(xkb_table(layout, xkbcomp=False))
@@ -120,7 +122,8 @@ def test_xkb_w_trigger_has_latchmods_at_levels_1_and_2():
     block = out[idx : out.index("};", idx)]
     act_line = [line for line in block.splitlines() if "actions[Group1]" in line][0]
     # Both halves present; one with +LevelThree (altgr half), one without.
-    assert "LatchMods(modifiers=DK2,latchToLock,clearLocks)" in act_line
-    assert "LatchMods(modifiers=DK2+LevelThree,latchToLock,clearLocks)" in act_line
+    assert "LatchMods(modifiers=DK2,clearLocks)" in act_line
+    assert "LatchMods(modifiers=DK2+LevelThree,clearLocks)" in act_line
+    assert "latchToLock" not in act_line
     # Levels 3-8 are NoAction (6 entries).
     assert act_line.count("NoAction()") == 6

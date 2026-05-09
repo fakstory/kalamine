@@ -33,6 +33,17 @@ def _legacy_symbol(
         symbol = "ISO_Level3_Latch" if keysym == ODK_ID else f"dead_{name}"
     elif keysym in XKB_KEY_SYM and len(XKB_KEY_SYM[keysym]) <= max_length:
         symbol = XKB_KEY_SYM[keysym]
+    elif len(keysym) != 1:
+        # `hex_ord` only handles single codepoints. A multi-char keysym
+        # reaching here means a marker/value didn't go through its
+        # dedicated dispatch (typically a 2dk/3dk trigger marker on a
+        # layout that didn't activate has_dk2/has_dk3, or a brand-new
+        # marker type not yet handled). Fail loud rather than crash on
+        # `ord(...)` with an opaque TypeError.
+        raise ValueError(
+            f"unhandled multi-codepoint keysym {keysym!r} on key {key_name!r} "
+            f"(layer {layer.name})"
+        )
     else:
         symbol = f"U{hex_ord(keysym).upper()}"
     return symbol.ljust(max_length)
@@ -109,6 +120,11 @@ def xkb_table(layout: "KeyboardLayout", xkbcomp: bool = False) -> List[str]:
                 # regular key: use a keysym if possible, utf-8 otherwise
                 elif keysym in XKB_KEY_SYM and len(XKB_KEY_SYM[keysym]) <= max_length:
                     symbol = XKB_KEY_SYM[keysym]
+                elif len(keysym) != 1:
+                    raise ValueError(
+                        f"unhandled multi-codepoint keysym {keysym!r} on key "
+                        f"{key_name!r} (layer {layer_index.name})"
+                    )
                 else:
                     symbol = f"U{hex_ord(keysym).upper()}"
             else:

@@ -3,7 +3,8 @@
 Validates that:
 - legacy fixtures stay byte-identical (regression assertion);
 - a 2dk-declaring fixture emits virtual_modifiers + KALAMINE_DK2 type;
-- trigger keys emit `LatchMods(modifiers=DK2[+LevelThree],latchToLock,clearLocks)`;
+- trigger keys emit `LatchMods(modifiers=DK2[+LevelThree],clearLocks)`;
+- lock-promoter cells (markers in the dk overlay) emit `LockMods(...)`;
 - 2dk-bearing keys use the 8-level multi-line key block.
 
 See `.docs/2dk.md` for the design these tests pin.
@@ -62,12 +63,29 @@ def test_2dk_emits_type_definition():
 
 
 def test_2dk_trigger_key_emits_latchmods_actions():
-    """W in the 2dk fixture has `--` (base) and `++` (shift)."""
+    """W in the 2dk fixture has `--` (base) and `++` (shift). Trigger
+    cells emit a plain LatchMods (no `latchToLock`): locking is now a
+    separate gesture on a dedicated lock-promoter cell on the dk
+    overlay, not a same-key double-tap.
+    """
     out = join(xkb_table(load_2dk(), xkbcomp=False))
-    # Both halves must appear as single-action LatchMods (one action,
-    # not two — that was the syntactic-impossibility risk).
-    assert "LatchMods(modifiers=DK2,latchToLock,clearLocks)" in out
-    assert "LatchMods(modifiers=DK2+LevelThree,latchToLock,clearLocks)" in out
+    assert "LatchMods(modifiers=DK2,clearLocks)" in out
+    assert "LatchMods(modifiers=DK2+LevelThree,clearLocks)" in out
+    # The old double-tap-to-lock semantics are gone.
+    assert "latchToLock" not in out
+
+
+def test_2dk_lock_promoter_cell_emits_lockmods():
+    """The 2dk fixture seeds `++` at AD10 on the dk overlay (DK2 layer).
+    That cell is reachable only while DK2 is latched; pressing it must
+    fire `LockMods(modifiers=DK2,affect=both)` to promote the latch
+    into a true lock (and to release it on a second tap).
+    """
+    out = join(xkb_table(load_2dk(), xkbcomp=False))
+    idx = out.index("key <AD10>")
+    block = out[idx : out.index("};", idx)]
+    assert 'type[Group1] = "KALAMINE_DK2"' in block
+    assert "LockMods(modifiers=DK2,affect=both)" in block
 
 
 def test_2dk_trigger_key_uses_eight_level_type():
