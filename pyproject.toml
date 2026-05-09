@@ -33,7 +33,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest",
-    "lxml",
+    "lxml>=5.4",  # 5.3 fails to build on Python 3.14
     "mypy>=1.13.0",
     "ruff>=0.8.0",
     "types-PyYAML",

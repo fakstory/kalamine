@@ -3,11 +3,11 @@
 from contextlib import contextmanager
 from importlib import metadata
 from pathlib import Path
-from typing import Iterator, List, Literal, Union
+from typing import Iterator, List, Literal, Optional, Union
 
 import click
 
-from .generators import ahk, keylayout, klc, web, xkb
+from .generators import ahk, keylayout, klc, report, toml_out, web, xkb
 from .help import create_layout, user_guide
 from .layout import KeyboardLayout, load_layout
 from .server import keyboard_server
@@ -17,7 +17,12 @@ from .server import keyboard_server
 def cli() -> None: ...
 
 
-def build_all(layout: KeyboardLayout, output_dir_path: Path) -> None:
+def build_all(
+    layout: KeyboardLayout,
+    output_dir_path: Path,
+    layout_path: Optional[Path] = None,
+    add_merged_file: bool = False,
+) -> None:
     """Generate all layout output files.
 
     Parameters
@@ -26,8 +31,12 @@ def build_all(layout: KeyboardLayout, output_dir_path: Path) -> None:
         The layout to process.
     output_dir_path : Path
         The output directory.
-    msklc_dir : Path
-        The MSKLC installation directory.
+    layout_path : Path, optional
+        The TOML/YAML descriptor path. Required when ``add_merged_file`` is True
+        so the source descriptors can be copied alongside the merged output.
+    add_merged_file : bool
+        When True, copy the original (and parent, if any) TOML descriptor into
+        a ``<fileName>/`` subdirectory next to a fully-merged TOML.
     """
 
     @contextmanager
@@ -77,6 +86,24 @@ def build_all(layout: KeyboardLayout, output_dir_path: Path) -> None:
     with file_creation_context(".svg") as svg_path:
         web.svg(layout).write(svg_path, encoding="utf-8", xml_declaration=True)
 
+    if add_merged_file:
+        if layout_path is None:
+            raise ValueError(
+                "build_all(add_merged_file=True) requires layout_path"
+            )
+        output_subdir = output_dir_path / layout.meta["fileName"]
+        toml_out.write_split_toml(layout, layout_path, output_subdir)
+        click.echo(f"... {output_subdir}")
+
+    # Merged TOML: standalone descriptor of the fully-resolved layout
+    with file_creation_context("_merged.toml") as toml_path:
+        toml_path.write_text(toml_out.merged_toml(layout), encoding="utf-8")
+
+    # Merged report: Markdown summary of key changes (extended layouts only)
+    if layout.key_diffs:
+        with file_creation_context("_merged_report.md") as report_path:
+            report_path.write_text(report.merged_report(layout), encoding="utf-8")
+
 
 @cli.command()
 @click.argument(
@@ -101,11 +128,18 @@ def build_all(layout: KeyboardLayout, output_dir_path: Path) -> None:
     is_flag=True,
     help="Keep shortcuts at their qwerty location",
 )
+@click.option(
+    "--add-merged-file",
+    default=False,
+    is_flag=True,
+    help="Include TOML source and merged output in dist/<layout>/",
+)
 def build(
     layout_descriptors: List[Path],
     out: Union[Path, Literal["all"]],
     angle_mod: bool,
     qwerty_shortcuts: bool,
+    add_merged_file: bool,
 ) -> None:
     """Convert TOML/YAML descriptions into OS-specific keyboard drivers."""
 
@@ -114,7 +148,7 @@ def build(
 
         # default: build all in the `dist` subdirectory
         if out == "all":
-            build_all(layout, Path("dist"))
+            build_all(layout, Path("dist"), input_file, add_merged_file)
             continue
 
         # quick output: reuse the input name and change the file extension

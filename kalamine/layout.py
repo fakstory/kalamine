@@ -31,26 +31,57 @@ DK_MARKER_CHARS = tuple(spec[2][0] for spec in DK_LAYERS) + tuple(
 #
 
 
+def _load_descriptor(file_path: Path) -> Dict:
+    if file_path.suffix in [".yaml", ".yml"]:
+        with file_path.open(encoding="utf-8") as file:
+            return yaml.load(file, Loader=yaml.SafeLoader)
+
+    with file_path.open(mode="rb") as dfile:
+        return tomllib.load(dfile)
+
+
+def resolve_parent_path(layout_path: Path) -> Optional[Path]:
+    cfg = _load_descriptor(layout_path)
+    if "extends" in cfg:
+        return layout_path.parent / cfg["extends"]
+    return None
+
+
+_DIFF_KEYS = {"base_diff": "base", "altgr_diff": "altgr", "full_diff": "full"}
+
+
+def _resolve_diff_extend(cfg: Dict, parent_cfg: Dict) -> Dict:
+    """Rename `*_diff` fields and inherit parent metadata without its templates.
+
+    Returns a cfg dict with child fields on top, parent meta filling the rest,
+    and the raw parent stashed under `_parent_cfg` for KeyboardLayout to overlay.
+    """
+    for diff_key, real_key in _DIFF_KEYS.items():
+        if diff_key in cfg:
+            cfg[real_key] = cfg.pop(diff_key)
+    merged = {
+        k: v for k, v in parent_cfg.items() if k not in ("base", "altgr", "full")
+    }
+    merged.update(cfg)
+    merged["_parent_cfg"] = parent_cfg
+    return merged
+
+
 def load_layout(layout_path: Path) -> Dict:
     """Load the TOML/YAML layout description data (and its ancessor, if any)."""
 
-    def load_descriptor(file_path: Path) -> Dict:
-        if file_path.suffix in [".yaml", ".yml"]:
-            with file_path.open(encoding="utf-8") as file:
-                return yaml.load(file, Loader=yaml.SafeLoader)
-
-        with file_path.open(mode="rb") as dfile:
-            return tomllib.load(dfile)
-
     try:
-        cfg = load_descriptor(layout_path)
+        cfg = _load_descriptor(layout_path)
         if "name" not in cfg:
             cfg["name"] = layout_path.stem
         if "extends" in cfg:
             parent_path = layout_path.parent / cfg["extends"]
-            ext = load_descriptor(parent_path)
-            ext.update(cfg)
-            cfg = ext
+            parent_cfg = _load_descriptor(parent_path)
+            if any(k in cfg for k in _DIFF_KEYS):
+                cfg = _resolve_diff_extend(cfg, parent_cfg)
+            else:
+                parent_cfg.update(cfg)
+                cfg = parent_cfg
         if "version" in cfg:
             version_check = cfg["version"].split(".")
             if len(version_check) > 3:
@@ -168,6 +199,9 @@ class KeyboardLayout:
         self.has_dk3 = False
         self.qwerty_shortcuts = qwerty_shortcuts
         self.angle_mod = angle_mod
+        # key_diffs: populated by _overlay_parent() for extended layouts.
+        # Maps key_name -> {layer_name: (parent_value, child_value)}
+        self.key_diffs: Dict[str, Dict[str, tuple]] = {}
 
         # metadata: self.meta
         _template_keys = {"base", "full", "altgr"} | {spec[0] for spec in DK_LAYERS}
@@ -240,6 +274,62 @@ class KeyboardLayout:
             self.layers[Layer.ALTGR_SHIFT]["spce"] = spc["altgr_shift"]
 
         self._parse_dead_keys(spc)
+
+        if "_parent_cfg" in layout_data:
+            self._overlay_parent(
+                layout_data["_parent_cfg"], angle_mod, qwerty_shortcuts, spc
+            )
+
+    def _overlay_parent(
+        self,
+        parent_cfg: Dict,
+        angle_mod: bool,
+        qwerty_shortcuts: bool,
+        spc: Dict[str, str],
+    ) -> None:
+        """Overlay this (child) layout on top of its parent.
+
+        Child-defined cells win; unset cells fall through to the parent. Dead
+        keys are re-parsed against the merged layers so inherited entries stay
+        valid.
+
+        Also populates self.key_diffs with per-key changes between parent and
+        child so that a report can be generated afterwards.
+        """
+        parent = KeyboardLayout(parent_cfg, angle_mod, qwerty_shortcuts)
+
+        # Compute diff before merging: collect keys that the child explicitly
+        # sets and that differ from the parent value.  Keys that are absent in
+        # the child's layers (i.e. empty string) are NOT reported — they will
+        # simply fall through to the parent value unchanged.
+        self.key_diffs = {}
+        layer_names = {
+            Layer.BASE: "base",
+            Layer.SHIFT: "shift",
+            Layer.ODK: "1dk",
+            Layer.ODK_SHIFT: "1dk_shift",
+            Layer.ALTGR: "altgr",
+            Layer.ALTGR_SHIFT: "altgr_shift",
+        }
+        for layer, lname in layer_names.items():
+            child_layer = self.layers[layer]
+            parent_layer = parent.layers[layer]
+            # Only look at keys the child explicitly provides.
+            for key, child_val in child_layer.items():
+                parent_val = parent_layer.get(key, "")
+                if child_val != parent_val:
+                    if key not in self.key_diffs:
+                        self.key_diffs[key] = {}
+                    self.key_diffs[key][lname] = (parent_val, child_val)
+
+        for layer in Layer:
+            parent.layers[layer].update(self.layers[layer])
+        self.layers = parent.layers
+        self.dk_set = parent.dk_set | self.dk_set
+        self.has_altgr = parent.has_altgr or self.has_altgr
+        self.has_1dk = parent.has_1dk or self.has_1dk
+        self._parse_dead_keys(spc)
+        self.dead_keys = {**parent.dead_keys, **self.dead_keys}
 
     def _parse_dead_keys(self, spc: Dict[str, str]) -> None:
         """Build a deadkey dict."""
