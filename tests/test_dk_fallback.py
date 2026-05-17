@@ -17,7 +17,7 @@ from kalamine.utils import Layer
 
 from .util import get_layout_dict
 
-FIXTURE_2DK = Path(__file__).parent / "fixtures" / "2dk.toml"
+FIXTURE_2DK = Path(__file__).parent.parent / "layouts" / "fixtures" / "2dk.toml"
 
 
 def load_2dk() -> KeyboardLayout:

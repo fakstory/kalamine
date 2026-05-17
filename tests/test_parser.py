@@ -92,7 +92,7 @@ def test_intl():  # 1dk + dead keys
     assert layout.layers[1]["ab01"] == "X"
 
 
-FIXTURES = Path(__file__).parent / "extended-diff"
+FIXTURES = Path(__file__).parent.parent / "layouts" / "extended-diff"
 
 EXTENDED_DIFF_CASES = [
     pytest.param(

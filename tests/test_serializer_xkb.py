@@ -253,7 +253,7 @@ def test_prog():
     assert xkbpatch == expected
 
 
-FIXTURE_1DK_LOCK = Path(__file__).parent / "fixtures" / "1dk_lock.toml"
+FIXTURE_1DK_LOCK = Path(__file__).parent.parent / "layouts" / "fixtures" / "1dk_lock.toml"
 
 
 def test_intl_with_1dk_lock():

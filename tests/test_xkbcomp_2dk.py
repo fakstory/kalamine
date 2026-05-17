@@ -19,7 +19,7 @@ import pytest
 from kalamine import KeyboardLayout
 from kalamine.generators.xkb import xkb_table
 
-FIXTURE_2DK = Path(__file__).parent / "fixtures" / "2dk.toml"
+FIXTURE_2DK = Path(__file__).parent.parent / "layouts" / "fixtures" / "2dk.toml"
 
 XKBCOMP = shutil.which("xkbcomp")
 

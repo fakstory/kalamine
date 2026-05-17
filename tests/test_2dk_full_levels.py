@@ -20,7 +20,7 @@ from kalamine import KeyboardLayout
 from kalamine.generators.xkb import xkb_table
 from kalamine.utils import Layer
 
-FIXTURE = Path(__file__).parent / "fixtures" / "2dk_full.toml"
+FIXTURE = Path(__file__).parent.parent / "layouts" / "fixtures" / "2dk_full.toml"
 
 
 def _layout() -> KeyboardLayout:

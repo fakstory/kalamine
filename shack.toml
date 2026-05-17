@@ -1,0 +1,25 @@
+schema = "shack/1"
+
+[project]
+name = "kalamine"
+
+[flavor]
+name = "default"
+
+[agents]
+include = []
+
+[experts]
+include = []
+
+[skills]
+include = []
+
+[commands]
+include = []
+
+[hooks]
+include = []
+
+[suite]
+source = "shack-ai"
